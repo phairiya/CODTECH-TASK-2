@@ -1,0 +1,405 @@
+App.js:
+
+import axios from 'axios'; // Import axios for making API requests
+import { motion } from 'framer-motion'; // Import motion for animations from framer-motion
+import React, { useEffect, useState } from 'react'; // Import React and necessary hooks
+import {
+  WiBarometer,
+  WiCloud,
+  WiDaySunny,
+  WiHumidity,
+  WiRain,
+  WiSnow,
+  WiStrongWind,
+  WiThunderstorm,
+} from 'react-icons/wi'; // Import weather icons from react-icons
+import { Puff } from 'react-loader-spinner'; // Import loading spinner component
+import './App.css'; // Import stylesheet
+
+const App = () => {
+  // State variables to manage weather data, forecast data, city name, loading state, and errors
+  const [weather, setWeather] = useState(null);
+  const [forecast, setForecast] = useState(null);
+  const [city, setCity] = useState('Dehradun');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  // API key for OpenWeatherMap API
+  const apiKey = '9e118cd07655b9599136a984bad34538';
+
+  // Fetch weather and forecast data whenever the city state changes
+  useEffect(() => {
+    fetchWeather();
+    fetchForecast();
+  }, [city]);
+
+  // Function to fetch current weather data for the specified city
+  const fetchWeather = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const response = await axios.get(
+        https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${apiKey}&units=metric
+      );
+      setWeather(response.data);
+      setLoading(false);
+      updateBackground(response.data.weather[0].main);
+    } catch (error) {
+      setLoading(false);
+      setError('City not found. Please try again.');
+    }
+  };
+
+  // Function to fetch 5-day weather forecast data for the specified city
+  const fetchForecast = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const response = await axios.get(
+        https://api.openweathermap.org/data/2.5/forecast?q=${city}&appid=${apiKey}&units=metric
+      );
+      setForecast(response.data);
+      setLoading(false);
+    } catch (error) {
+      setLoading(false);
+      setError('Error fetching forecast data. Please try again.');
+    }
+  };
+
+  // Function to update background image based on the main weather condition
+  const updateBackground = (weatherMain) => {
+    const body = document.querySelector('body');
+    switch (weatherMain) {
+      case 'Clear':
+        body.style.backgroundImage = 'url("/assets/clear.jpg")';
+        break;
+      case 'Clouds':
+        body.style.backgroundImage = 'url("/assets/cloudy.jpg")';
+        break;
+      case 'Rain':
+        body.style.backgroundImage = 'url("/assets/rainy.jpg")';
+        break;
+      case 'Snow':
+        body.style.backgroundImage = 'url("/assets/snowy.jpg")';
+        break;
+      case 'Thunderstorm':
+        body.style.backgroundImage = 'url("/assets/thunderstorm.jpg")';
+        break;
+      default:
+        body.style.backgroundImage = 'url("/assets/default.jpg")';
+        break;
+    }
+  };
+
+  // Function to get the appropriate weather icon based on the main weather condition
+  const getWeatherIcon = (main) => {
+    switch (main) {
+      case 'Clear':
+        return <WiDaySunny />;
+      case 'Clouds':
+        return <WiCloud />;
+      case 'Rain':
+        return <WiRain />;
+      case 'Snow':
+        return <WiSnow />;
+      case 'Thunderstorm':
+        return <WiThunderstorm />;
+      default:
+        return <WiDaySunny />;
+    }
+  };
+
+  // Function to get the day name from a date string
+  const getDayName = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { weekday: 'short' });
+  };
+
+  // Function to get the current location's weather and forecast using the Geolocation API
+  const getCurrentLocationWeather = () => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition((position) => {
+        const { latitude, longitude } = position.coords;
+        fetchWeatherByCoordinates(latitude, longitude);
+        fetchForecastByCoordinates(latitude, longitude);
+      });
+    }
+  };
+
+  // Function to fetch current weather data based on latitude and longitude coordinates
+  const fetchWeatherByCoordinates = async (lat, lon) => {
+    setLoading(true);
+    setError('');
+    try {
+      const response = await axios.get(
+        https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${apiKey}&units=metric
+      );
+      setWeather(response.data);
+      setLoading(false);
+      updateBackground(response.data.weather[0].main);
+    } catch (error) {
+      setLoading(false);
+      setError('Error fetching weather data. Please try again.');
+    }
+  };
+
+  // Function to fetch 5-day weather forecast data based on latitude and longitude coordinates
+  const fetchForecastByCoordinates = async (lat, lon) => {
+    setLoading(true);
+    setError('');
+    try {
+      const response = await axios.get(
+        https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lon}&appid=${apiKey}&units=metric
+      );
+      setForecast(response.data);
+      setLoading(false);
+    } catch (error) {
+      setLoading(false);
+      setError('Error fetching forecast data. Please try again.');
+    }
+  };
+
+  return (
+    <div className="app">
+      {/* Search box for entering city name and buttons for fetching weather data */}
+      <motion.div
+        className="search-box"
+        initial={{ y: -100 }}
+        animate={{ y: 0 }}
+        transition={{ type: 'spring', stiffness: 50 }}
+      >
+        <input
+          type="text"
+          className="search-input"
+          value={city}
+          onChange={(e) => setCity(e.target.value)}
+          placeholder="Enter city name..."
+        />
+        <button onClick={fetchWeather}>Search</button>
+        <button onClick={getCurrentLocationWeather}>Use Current Location</button>
+      </motion.div>
+
+      {/* Loader spinner */}
+      {loading && (
+        <div className="loader">
+          <Puff height="100" width="100" color="#00BFFF" ariaLabel="loading" />
+        </div>
+      )}
+
+      {/* Error message */}
+      {error && <p className="error">{error}</p>}
+
+      {/* Weather data display */}
+      {weather && (
+        <motion.div
+          className="weather-box"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 1 }}
+        >
+          <h2>{weather.name}, {weather.sys.country}</h2>
+          <div className="weather-icon">
+            {getWeatherIcon(weather.weather[0].main)}
+          </div>
+          <div className="weather-details">
+            <p>{weather.main.temp}°C</p>
+            <p>{weather.weather[0].main}</p>
+            <div className="additional-info">
+              <p>
+                <WiHumidity /> {weather.main.humidity}%
+              </p>
+              <p>
+                <WiStrongWind /> {weather.wind.speed} m/s
+              </p>
+              <p>
+                <WiBarometer /> {weather.main.pressure} hPa
+              </p>
+            </div>
+          </div>
+        </motion.div>
+      )}
+
+      {/* Forecast data display */}
+      {forecast && (
+        <motion.div
+          className="forecast-box"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 1 }}
+        >
+          <h3>5-Day Forecast</h3>
+          <div className="forecast">
+            {forecast.list
+              .filter((_, index) => index % 8 === 0)
+              .map((forecastItem) => (
+                <div key={forecastItem.dt} className="forecast-item">
+                  <p>{getDayName(forecastItem.dt_txt)}</p>
+                  <div className="forecast-icon">
+                    {getWeatherIcon(forecastItem.weather[0].main)}
+                  </div>
+                  <p>{forecastItem.main.temp}°C</p>
+                </div>
+              ))}
+          </div>
+        </motion.div>
+      )}
+    </div>
+  );
+};
+
+export default App;
+
+App.css:
+
+/* General body and HTML styles */
+body, html {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  font-family: 'Arial', sans-serif;
+  background: linear-gradient(to right, #0f2027, #203a43, #2c5364); /* Gradient background */
+  color: white;
+  overflow: hidden; /* Prevents scrolling */
+}
+
+/* Main app container styles */
+.app {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  position: relative;
+  z-index: 1;
+}
+
+/* Search box styles */
+.search-box {
+  display: flex;
+  margin-bottom: 20px;
+  background: rgba(255, 255, 255, 0.1); /* Semi-transparent background */
+  padding: 10px;
+  border-radius: 10px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3); /* Subtle shadow */
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.search-box:hover {
+  transform: scale(1.05); /* Slight scale up on hover */
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3); /* Stronger shadow on hover */
+}
+
+/* Search input styles */
+.search-input {
+  padding: 10px;
+  border: none;
+  border-radius: 4px;
+  margin-right: 10px;
+  font-size: 16px;
+  width: 200px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); /* Subtle shadow */
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.search-input:focus {
+  outline: none;
+  transform: scale(1.05); /* Slight scale up on focus */
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2); /* Stronger shadow on focus */
+}
+
+/* Button styles */
+button {
+  padding: 10px 15px;
+  border: none;
+  border-radius: 4px;
+  background-color: #007bff; /* Primary blue color */
+  color: white;
+  font-size: 16px;
+  cursor: pointer;
+  margin-left: 5px;
+  transition: background-color 0.3s ease, transform 0.2s, box-shadow 0.2s;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); /* Subtle shadow */
+}
+
+button:hover {
+  background-color: #0056b3; /* Darker blue on hover */
+  transform: scale(1.05); /* Slight scale up on hover */
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2); /* Stronger shadow on hover */
+}
+
+button:active {
+  transform: scale(0.95); /* Slight scale down on active */
+}
+
+/* Weather and forecast box styles */
+.weather-box, .forecast-box {
+  text-align: center;
+  background: rgba(0, 0, 0, 0.6); /* Semi-transparent black background */
+  padding: 20px;
+  border-radius: 10px;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3); /* Moderate shadow */
+  margin-bottom: 20px;
+  width: 90%;
+  max-width: 600px;
+  transition: transform 0.2s, background 0.5s;
+}
+
+.weather-box:hover, .forecast-box:hover {
+  transform: scale(1.05); /* Slight scale up on hover */
+  background: rgba(0, 0, 0, 0.8); /* Darker background on hover */
+}
+
+/* Weather and forecast icon styles */
+.weather-icon, .forecast-icon {
+  font-size: 48px;
+  margin: 10px 0;
+}
+
+/* Weather details and forecast item styles */
+.weather-details p, .forecast-item p {
+  margin: 5px 0;
+  font-size: 24px;
+}
+
+/* Additional information section styles */
+.additional-info {
+  display: flex;
+  justify-content: space-around;
+  margin-top: 10px;
+}
+
+/* Forecast container styles */
+.forecast {
+  display: flex;
+  justify-content: space-around;
+  margin-top: 20px;
+}
+
+/* Individual forecast item styles */
+.forecast-item {
+  text-align: center;
+  padding: 10px;
+}
+
+/* Loader container styles */
+.loader {
+  margin-top: 20px;
+}
+
+/* Error message styles */
+.error {
+  color: red;
+  margin-top: 20px;
+  font-size: 18px;
+}
+
+/* Background animation */
+@keyframes moveBackground {
+  0% { background-position: 0 0; }
+  100% { background-position: 100% 100%; }
+}
+
+body {
+  background-size: 200% 200%;
+  animation: moveBackground 55s linear infinite; /* Smooth background animation */
+}
